@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inspiro – Civic Issue Reporting</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <style>body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #0f111a;
+      color: #e0e0e0;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      padding: 15px 30px;
+      background-color: #1a1c2a;
+      gap: 20px;
+    }
+    header .logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #4a90e2;
+      cursor: pointer;
+    }
+    .nav-buttons {
+      display: flex;
+      align-items: center;
+    }
+    .nav-buttons button {
+      margin-left: 10px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 25px;
+      background-color: #2c2f3a;
+      color: #fff;
+      cursor: pointer;
+      position: relative;
+    }
+    .nav-buttons button.active::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background-color: #4a90e2;
+      border-radius: 2px;
+    }
+    .nav-buttons button.report {
+      background-color: #4a90e2;
+    }
+    .categories {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    .categories button {
+      padding: 8px 15px;
+      border: none;
+      border-radius: 20px;
+      background-color: #2c2f3a;
+      color: #fff;
+      cursor: pointer;
+    }
+    .actions button {
+      padding: 12px 25px;
+      margin-right: 15px;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .actions .quick {
+      background-color: #2c7a4b;
+      color: #fff;
+    }
+    .actions .map {
+      background-color: #2c2f3a;
+      color: #fff;
+    }
+    .home-container {
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+    }
+    .home-content { flex: 3; }
+    .sidebar {
+      flex: 1;
+      background-color: #1a1c2a;
+      padding: 20px;
+      border-radius: 10px;
+    }
+    .sidebar h3 {
+      margin-top: 0;
+      border-bottom: 1px solid #444;
+      padding-bottom: 5px;
+    }
+    .sidebar ul { list-style: none; padding: 0; }
+    .sidebar li { margin-bottom: 10px; }
+    .quote {
+      margin-top: 20px;
+      font-style: italic;
+      color: #ccc;
+      text-align: center;
+    }
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      overflow: auto;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: #1a1c2a;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      max-height: 90%;
+      overflow-y: auto;
+    }
+    .modal-content h3 { margin-top: 0; }
+    .modal-content label {
+      display: block;
+      margin-top: 10px;
+      margin-bottom: 5px;
+    }
+    .modal-content input,
+    .modal-content textarea,
+    .modal-content select {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      border-radius: 5px;
+      background-color: #2c2f3a;
+      color: #fff;
+    }
+    .modal-content button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 25px;
+      background-color: #4a90e2;
+      color: #fff;
+      cursor: pointer;
+    }
+    #map, #reportMap {
+      width: 100%;
+      height: 300px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+    .issue-item {
+      background: linear-gradient(145deg, #1f2230, #15171f);
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    .issue-item img {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    .progress-bar {
+      background-color: #2c2f3a;
+      border-radius: 8px;
+      overflow: hidden;
+      height: 18px;
+      margin-top: 10px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4a90e2, #2bc1ff);
+      width: 0%;
+      transition: width 0.5s ease-in-out;
+    }
+    footer {
+      margin-top: 40px;
+      padding: 10px;
+      text-align: center;
+      background: #1a1c2a;
+      color: #e0e0e0;
+    }</style>
+   
+</head>
+<body>
+
+<header>
+  <div class="logo">INSPIRO</div>
+  <div class="nav-buttons">
+    <button onclick="showHome()">Home</button>
+    <button onclick="showMap()">Map</button>
+    <button onclick="showList()">List</button>
+    <button class="report" onclick="openReport()">Report Issue</button>
+    <button onclick="openOfficerLogin()">Officer Login</button>
+  </div>
+</header>
+
+<div id="homeView">
+  <div class="home-container">
+    <div class="home-content">
+      <h1>Report. Track. Solve — together.</h1>
+      <p>Crowdsourced reporting for civic issues. Submit in under a minute and track the progress.</p>
+      <div class="categories">
+        <button onclick="openReport('Pothole')">Pothole</button>
+        <button onclick="openReport('Garbage')">Garbage</button>
+        <button onclick="openReport('Streetlight')">Streetlight</button>
+        <button onclick="openReport('Water')">Water</button>
+        <button onclick="openReport('Encroachment')">Encroachment</button>
+        <button onclick="openReport('Tree')">Tree</button>
+      </div>
+      <div class="actions">
+        <button class="quick" onclick="openReport()">Quick Report</button>
+        <button class="map" onclick="showMap()">View City Map</button>
+      </div>
+    </div>
+    <div class="sidebar">
+      <h3>City-wide Info</h3>
+      <ul>
+        <li>📅 Maintenance schedules</li>
+        <li>📞 Emergency contacts</li>
+      </ul>
+      <div class="quote" id="quoteDisplay">“Together, we build a better city.”</div>
+    </div>
+  </div>
+</div>
+
+<div id="mapView" style="display:none; padding:20px;">
+  <h2>City Map</h2>
+  <div id="map"></div>
+</div>
+
+<div id="listView" style="display:none; padding:20px;">
+  <h2>Reported Issues</h2>
+  <div id="issuesList"></div>
+</div>
+
+<div id="officerView" style="display:none; padding:20px;">
+  <h2>Officer Dashboard</h2>
+  <button onclick="logoutOfficer()" style="background-color:#f44336;">Logout</button>
+  <div id="officerIssues"></div>
+</div>
+
+<!-- Report Modal -->
+<div class="modal" id="reportModal">
+  <div class="modal-content">
+    <h3>Report Issue</h3>
+    <label>Issue Type</label>
+    <select id="issueType">
+      <option>Pothole</option><option>Garbage</option><option>Streetlight</option>
+      <option>Water</option><option>Encroachment</option><option>Tree</option>
+    </select>
+    <label>Ward</label>
+    <input type="text" id="issueWard" placeholder="Enter ward number" />
+    <label>Description</label>
+    <textarea id="issueDesc" rows="3"></textarea>
+    <label>Select Location</label>
+    <button onclick="detectLocation()">Auto Detect Location</button>
+    <div id="reportMap"></div>
+    <input type="text" id="issueLat" placeholder="Latitude" readonly>
+    <input type="text" id="issueLng" placeholder="Longitude" readonly>
+    <button onclick="submitIssue()">Submit</button>
+    <button onclick="closeReport()" style="background-color:#f44336;">Cancel</button>
+  </div>
+</div>
+
+<!-- Officer Login Modal -->
+<div class="modal" id="officerLoginModal">
+  <div class="modal-content">
+    <h3>Officer Login</h3>
+    <input type="text" id="officerId" placeholder="Enter User ID" />
+    <input type="password" id="officerPassword" placeholder="Enter Password" />
+    <button onclick="officerLogin()">Login</button>
+    <button onclick="closeOfficerLogin()" style="background-color:#f44336;">Cancel</button>
+  </div>
+</div>
+
+<footer><p>© 2025 INSPIRO</p></footer>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAsYL7IqeIISE1yaTz2M_96oTEr3kcStH8",
+    authDomain: "crowd-sourced-civic-report.firebaseapp.com",
+    projectId: "crowd-sourced-civic-report",
+    storageBucket: "crowd-sourced-civic-report.appspot.com",
+    messagingSenderId: "1020573384438",
+    appId: "1:1020573384438:web:adf653cf0c0b18baf765b3"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  let map, reportMap, reportMarker, markers = [];
+
+  function submitIssue() {
+    const type = document.getElementById('issueType').value;
+    const ward = document.getElementById('issueWard').value;
+    const desc = document.getElementById('issueDesc').value;
+    const lat = document.getElementById('issueLat').value;
+    const lng = document.getElementById('issueLng').value;
+
+    if (!ward || !desc || !lat || !lng) {
+      alert('Please fill all fields.');
+      return;
+    }
+
+    const newIssue = { type, ward, desc, lat: parseFloat(lat), lng: parseFloat(lng), progress: 0, timestamp: Date.now() };
+    db.collection('issues').add(newIssue).then(() => {
+      closeReport();
+      updateMapMarkers();
+      renderIssues();
+      renderOfficerIssues();
+      alert('Issue submitted successfully');
+    });
+  }
+
+  function renderOfficerIssues() {
+    db.collection('issues').get().then(snapshot => {
+      const container = document.getElementById('officerIssues');
+      container.innerHTML = '';
+      snapshot.forEach(doc => {
+        const issue = doc.data();
+        const div = document.createElement('div');
+        div.className = 'issue-item';
+        div.innerHTML = `
+          <h5>${issue.type}</h5>
+          <p><strong>Ward:</strong> ${issue.ward}</p>
+          <p>${issue.desc}</p>
+          <p>📍 ${issue.lat}, ${issue.lng}</p>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${issue.progress || 0}%"></div>
+          </div>
+          <label>Update Progress:</label>
+          <input type="range" min="0" max="100" value="${issue.progress || 0}" 
+            onchange="updateProgress('${doc.id}', this.value)">
+        `;
+        container.appendChild(div);
+      });
+    });
+  }
+
+  function updateProgress(id, value) {
+    db.collection('issues').doc(id).update({ progress: parseInt(value) }).then(() => {
+      renderOfficerIssues();
+      renderIssues();
+      updateMapMarkers();
+    });
+  }
+
+  function updateMapMarkers() {
+    db.collection('issues').get().then(snapshot => {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      snapshot.forEach(doc => {
+        const issue = doc.data();
+        if (issue.lat && issue.lng) {
+          const marker = L.marker([issue.lat, issue.lng]).addTo(map)
+            .bindPopup(`<b>${issue.type}</b><br>${issue.desc}<br>Progress: ${issue.progress || 0}%`);
+          markers.push(marker);
+        }
+      });
+    });
+  }
+
+  function renderIssues() {
+    db.collection('issues').get().then(snapshot => {
+      const container = document.getElementById('issuesList');
+      container.innerHTML = '';
+      snapshot.forEach(doc => {
+        const issue = doc.data();
+        const div = document.createElement('div');
+        div.className = 'issue-item';
+        div.innerHTML = `<h5>${issue.type}</h5>
+          <p><strong>Ward:</strong> ${issue.ward}</p>
+          <p>${issue.desc}</p>
+          <p>📍 ${issue.lat}, ${issue.lng}</p>
+          <div class="progress-bar"><div class="progress-fill" style="width:${issue.progress || 0}%"></div></div>`;
+        container.appendChild(div);
+      });
+    });
+  }
+
+  function initMap() {
+    if (!map) {
+      map = L.map('map').setView([11.1271, 78.6569], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    }
+    updateMapMarkers();
+  }
+
+  function initReportMap() {
+    if (!reportMap) {
+      reportMap = L.map('reportMap').setView([11.1271, 78.6569], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(reportMap);
+      reportMap.on('click', e => {
+        document.getElementById('issueLat').value = e.latlng.lat;
+        document.getElementById('issueLng').value = e.latlng.lng;
+        if (reportMarker) reportMap.removeLayer(reportMarker);
+        reportMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(reportMap);
+      });
+    } else reportMap.invalidateSize();
+  }
+
+  function detectLocation() {
+    if (!navigator.geolocation) { alert("Geolocation not supported."); return; }
+    navigator.geolocation.getCurrentPosition(pos => {
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      document.getElementById('issueLat').value = lat;
+      document.getElementById('issueLng').value = lng;
+      if (reportMarker) reportMap.removeLayer(reportMarker);
+      reportMarker = L.marker([lat, lng]).addTo(reportMap).bindPopup("📍 Your Location").openPopup();
+      reportMap.setView([lat, lng], 15);
+    });
+  }
+
+  function openReport(type='') {
+    document.getElementById('reportModal').classList.add('show');
+    if(type) document.getElementById('issueType').value = type;
+    setTimeout(() => { initReportMap(); reportMap.invalidateSize(); }, 300);
+  }
+  function closeReport() { document.getElementById('reportModal').classList.remove('show'); if(reportMarker){ reportMap.removeLayer(reportMarker); reportMarker=null; } }
+  function openOfficerLogin() { document.getElementById('officerLoginModal').classList.add('show'); }
+  function closeOfficerLogin() { document.getElementById('officerLoginModal').classList.remove('show'); }
+
+  function officerLogin() {
+    const id = document.getElementById('officerId').value.trim();
+    const pw = document.getElementById('officerPassword').value.trim();
+    if(id==="admin" && pw==="admin123"){
+      localStorage.setItem('officerLoggedIn','true');
+      showOfficerDashboard();
+      closeOfficerLogin();
+    } else alert("Invalid credentials");
+  }
+  function logoutOfficer(){ localStorage.removeItem('officerLoggedIn'); showHome(); }
+
+  function showHome(){ document.getElementById('homeView').style.display='block'; document.getElementById('mapView').style.display='none'; document.getElementById('listView').style.display='none'; document.getElementById('officerView').style.display='none'; }
+  function showMap(){ document.getElementById('homeView').style.display='none'; document.getElementById('mapView').style.display='block'; document.getElementById('listView').style.display='none'; document.getElementById('officerView').style.display='none'; initMap(); }
+  function showList(){ document.getElementById('homeView').style.display='none'; document.getElementById('mapView').style.display='none'; document.getElementById('listView').style.display='block'; document.getElementById('officerView').style.display='none'; renderIssues(); }
+  function showOfficerDashboard(){ document.getElementById('homeView').style.display='none'; document.getElementById('mapView').style.display='none'; document.getElementById('listView').style.display='none'; document.getElementById('officerView').style.display='block'; renderOfficerIssues(); }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if(localStorage.getItem('officerLoggedIn')==='true') showOfficerDashboard();
+    else showHome();
+  });
+</script>
+</body>
+</html>
