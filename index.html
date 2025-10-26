@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title> Civic Issue Reporting</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #0f111a;
+            color: #e0e0e0;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            padding: 15px 30px;
+            background-color: #1a1c2a;
+            gap: 20px;
+        }
+        header .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4a90e2;
+            cursor: pointer;
+        }
+        .nav-buttons {
+            display: flex;
+            align-items: center;
+        }
+        .nav-buttons button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            background-color: #2c2f3a;
+            color: #fff;
+            cursor: pointer;
+            position: relative;
+        }
+        .nav-buttons button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: #4a90e2;
+            border-radius: 2px;
+        }
+        .nav-buttons button.report {
+            background-color: #4a90e2;
+        }
+        .categories {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .categories button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 20px;
+            background-color: #2c2f3a;
+            color: #fff;
+            cursor: pointer;
+        }
+        .actions button {
+            padding: 12px 25px;
+            margin-right: 15px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .actions .quick {
+            background-color: #2c7a4b;
+            color: #fff;
+        }
+        .actions .map {
+            background-color: #2c2f3a;
+            color: #fff;
+        }
+        .home-container {
+            display: flex;
+            gap: 20px;
+        }
+        .home-content {
+            flex: 3;
+        }
+        .sidebar {
+            flex: 1;
+            background-color: #1a1c2a;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .sidebar h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar li {
+            margin-bottom: 10px;
+        }
+        .quote {
+            margin-top: 20px;
+            font-style: italic;
+            color: #ccc;
+            text-align: center;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            overflow: auto;
+        }
+        .modal-content {
+            background: #1a1c2a;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 90%;
+            overflow-y: auto;
+        }
+        .modal-content h3 {
+            margin-top: 0;
+        }
+        .modal-content label {
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+        .modal-content input, .modal-content textarea, .modal-content select {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            background-color: #2c2f3a;
+            color: #fff;
+        }
+        .modal-content button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            background-color: #4a90e2;
+            color: #fff;
+            cursor: pointer;
+        }
+        #map, #reportMap {
+            width: 100%;
+            height: 300px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        .issue-item {
+            background: linear-gradient(145deg, #1f2230, #15171f);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            transition: transform 0.2s;
+        }
+        .issue-item:hover {
+            transform: translateY(-3px);
+        }
+        .issue-item img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+        .progress-bar {
+            background-color: #2c2f3a;
+            border-radius: 8px;
+            overflow: hidden;
+            height: 18px;
+            margin-top: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4a90e2, #2bc1ff);
+            width: 0%;
+            transition: width 0.5s ease-in-out;
+        }
+        #ins{
+            color: blue;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">CIVFIX</div>
+        <div class="nav-buttons">
+            <button onclick="showHome()">Home</button>
+            <button onclick="showMap()">Map</button>
+            <button onclick="showList()">List</button>
+            <button class="report" onclick="openReport()">Report Issue</button>
+            <button onclick="openOfficerLogin()">Officer Login</button>
+        </div>
+    </header>
+
+    <div id="homeView" style="padding: 20px;">
+        <div class="home-container">
+            <div class="home-content">
+                <h1>Report. Track. Solve — together.</h1>
+                <p>Crowdsourced reporting for civic issues. Submit in under a minute and track the progress.</p>
+
+                <div class="categories">
+                    <button onclick="openReport('Pothole')">Pothole</button>
+                    <button onclick="openReport('Garbage')">Garbage</button>
+                    <button onclick="openReport('Streetlight')">Streetlight</button>
+                    <button onclick="openReport('Water')">Water</button>
+                    <button onclick="openReport('Encroachment')">Encroachment</button>
+                    <button onclick="openReport('Tree')">Tree</button>
+                </div>
+
+                <div class="actions">
+                    <button class="quick" onclick="openReport()">Quick Report</button>
+                    <button class="map" onclick="showMap()">View City Map</button>
+                </div>
+            </div>
+
+            
+            </div>
+        </div>
+    </div>
+
+    <div id="mapView" style="display:none; padding: 20px;">
+        <h2>City Map</h2>
+        <div id="map"></div>
+    </div>
+
+    <div id="listView" style="display:none; padding: 20px;">
+        <h2>Reported Issues</h2>
+        <div id="issuesList"></div>
+    </div>
+
+    <!-- Report Modal -->
+    <div class="modal" id="reportModal">
+        <div class="modal-content">
+            <h3>Report Issue</h3>
+            <label for="issueType">Issue Type</label>
+            <select id="issueType">
+                <option>Pothole</option>
+                <option>Garbage</option>
+                <option>Streetlight</option>
+                <option>Water</option>
+                <option>Encroachment</option>
+                <option>Tree</option>
+            </select>
+            <label for="issueWard">Ward</label>
+            <input type="text" id="issueWard" placeholder="Enter ward number" />
+            <label for="issueDesc">Description</label>
+            <textarea id="issueDesc" rows="3" placeholder="Describe the issue"></textarea>
+            <label for="issueImage">Image (optional)</label>
+            <input type="file" id="issueImage" accept="image/*" />
+            <label for="issueLocation">Select Location</label>
+            <button onclick="detectLocation()">Auto Detect Location</button>
+            <div id="reportMap"></div>
+            <input type="text" id="issueLat" placeholder="Latitude" readonly style="margin-top:5px;">
+            <input type="text" id="issueLng" placeholder="Longitude" readonly style="margin-top:5px;">
+            <button onclick="submitIssue()">Submit</button>
+            <button onclick="closeReport()" style="background-color: #f44336;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Officer Login Modal -->
+    <div class="modal" id="officerLoginModal">
+        <div class="modal-content">
+            <h3>Officer Login</h3>
+            <label for="officerId">User ID</label>
+            <input type="text" id="officerId" placeholder="Enter User ID" />
+            <button onclick="officerLogin()">Login</button>
+            <button onclick="closeOfficerLogin()" style="background-color: #f44336;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Officer Dashboard -->
+    <div id="officerView" style="display:none; padding:20px;">
+        <h2>Officer Dashboard</h2>
+        <button onclick="logoutOfficer()" style="background-color: #f44336;">Logout</button>
+        <div id="officerIssues"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        let map, markers = [];
+        let reportMap, reportMarker;
+        const quotes = [
+            "Together, we build a better city.",
+            "Every report helps improve lives.",
+            "Your voice matters.",
+            "A cleaner city is a happier city."
+        ];
+        let quoteIndex = 0;
+
+        function rotateQuotes() {
+            const quoteDisplay = document.getElementById('quoteDisplay');
+            quoteDisplay.textContent = quotes[quoteIndex];
+            quoteIndex = (quoteIndex + 1) % quotes.length;
+        }
+        setInterval(rotateQuotes, 5000);
+
+        function initMap() {
+            if(map) return;
+            map = L.map('map').setView([20.5937, 78.9629], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(map);
+            renderMapMarkers();
+        }
+
+        function initReportMap() {
+            if(reportMap) return;
+            reportMap = L.map('reportMap').setView([20.5937, 78.9629], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(reportMap);
+            reportMap.on('click', function(e){
+                const {lat, lng} = e.latlng;
+                setReportMarker(lat, lng);
+            });
+        }
+
+        function setReportMarker(lat, lng) {
+            if(reportMarker) reportMap.removeLayer(reportMarker);
+            reportMarker = L.marker([lat, lng]).addTo(reportMap);
+            document.getElementById('issueLat').value = lat.toFixed(6);
+            document.getElementById('issueLng').value = lng.toFixed(6);
+        }
+
+        function detectLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const { latitude, longitude } = position.coords;
+                    reportMap.setView([latitude, longitude], 15);
+                    setReportMarker(latitude, longitude);
+                }, error => {
+                    alert("Unable to detect location.");
+                });
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function renderMapMarkers() {
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            const issues = JSON.parse(localStorage.getItem('issues') || '[]');
+            issues.forEach(issue => {
+                if(issue.lat && issue.lng){
+                    const marker = L.marker([issue.lat, issue.lng]).addTo(map)
+                        .bindPopup(`<b>${issue.type}</b><br>Ward: ${issue.ward}<br>${issue.desc}<br>Progress: ${issue.progress}%`);
+                    markers.push(marker);
+                }
+            });
+        }
+
+        function renderIssues() {
+            const container = document.getElementById('issuesList');
+            container.innerHTML = '';
+            const issues = JSON.parse(localStorage.getItem('issues') || '[]');
+            if(issues.length === 0){
+                container.innerHTML = '<p>No issues reported yet.</p>';
+                return;
+            }
+            issues.forEach(issue => {
+                const div = document.createElement('div');
+                div.className = 'issue-item';
+                div.innerHTML = `<strong>${issue.type}</strong><br>
+                                 Ward: ${issue.ward}<br>
+                                 ${issue.desc}<br>
+                                 <small>${issue.date}</small>
+                                 <div class="progress-bar"><div class="progress-fill" style="width:${issue.progress}%"></div></div>`;
+                if(issue.image){
+                    const img = document.createElement('img');
+                    img.src = issue.image;
+                    div.appendChild(img);
+                }
+                container.appendChild(div);
+            });
+        }
+
+        function openReport(defaultType = '') {
+            document.getElementById('reportModal').style.display = 'flex';
+            if(defaultType){
+                document.getElementById('issueType').value = defaultType;
+            }
+            setTimeout(initReportMap, 100);
+        }
+
+        function closeReport() {
+            document.getElementById('reportModal').style.display = 'none';
+            if(reportMarker){
+                reportMap.removeLayer(reportMarker);
+                reportMarker = null;
+            }
+            document.getElementById('issueLat').value = '';
+            document.getElementById('issueLng').value = '';
+        }
+
+        function submitIssue() {
+            const type = document.getElementById('issueType').value;
+            const ward = document.getElementById('issueWard').value.trim();
+            const desc = document.getElementById('issueDesc').value.trim();
+            const lat = document.getElementById('issueLat').value.trim();
+            const lng = document.getElementById('issueLng').value.trim();
+            const imageInput = document.getElementById('issueImage');
+            if(!ward || !desc || !lat || !lng){
+                alert("Please fill all fields and select a location.");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function() {
+                const imgData = reader.result;
+                const issues = JSON.parse(localStorage.getItem('issues') || '[]');
+                const newIssue = {
+                    id: Date.now(),
+                    type: type,
+                    ward: ward,
+                    desc: desc,
+                    date: new Date().toLocaleString(),
+                    lat: parseFloat(lat),
+                    lng: parseFloat(lng),
+                    image: imgData,
+                    progress: 0
+                };
+                issues.push(newIssue);
+                localStorage.setItem('issues', JSON.stringify(issues));
+                alert("Issue reported successfully!");
+                closeReport();
+                renderIssues();
+                renderMapMarkers();
+            };
+            if(imageInput.files.length > 0){
+                reader.readAsDataURL(imageInput.files[0]);
+            } else {
+                reader.onload();
+            }
+        }
+
+        function setActive(name) {
+            const buttons = document.querySelectorAll('.nav-buttons button');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            if(name === 'Home'){
+                buttons[0].classList.add('active');
+            } else if(name === 'Map'){
+                buttons[1].classList.add('active');
+            } else if(name === 'List'){
+                buttons[2].classList.add('active');
+            }
+        }
+
+        function showHome() {
+            document.getElementById('homeView').style.display = 'block';
+            document.getElementById('mapView').style.display = 'none';
+            document.getElementById('listView').style.display = 'none';
+            document.getElementById('officerView').style.display = 'none';
+            setActive('Home');
+        }
+
+        function showMap() {
+            document.getElementById('homeView').style.display = 'none';
+            document.getElementById('mapView').style.display = 'block';
+            document.getElementById('listView').style.display = 'none';
+            document.getElementById('officerView').style.display = 'none';
+            setActive('Map');
+            setTimeout(() => {
+                initMap();
+                map.invalidateSize();
+            }, 100);
+        }
+
+        function showList() {
+            document.getElementById('homeView').style.display = 'none';
+            document.getElementById('mapView').style.display = 'none';
+            document.getElementById('listView').style.display = 'block';
+            document.getElementById('officerView').style.display = 'none';
+            setActive('List');
+            setTimeout(() => {
+                renderIssues();
+            }, 100);
+        }
+
+        // Officer Login Modal functions
+        function openOfficerLogin() {
+            document.getElementById('officerLoginModal').style.display = 'flex';
+        }
+        function closeOfficerLogin() {
+            document.getElementById('officerLoginModal').style.display = 'none';
+        }
+
+        function officerLogin() {
+            const officerId = document.getElementById('officerId').value.trim();
+            if(!officerId){
+                alert("Please enter User ID.");
+                return;
+            }
+            localStorage.setItem('officerLoggedIn', 'true');
+            localStorage.setItem('officerId', officerId);
+            closeOfficerLogin();
+            showOfficerDashboard();
+        }
+
+        function logoutOfficer() {
+            localStorage.removeItem('officerLoggedIn');
+            localStorage.removeItem('officerId');
+            showHome();
+        }
+
+        function showOfficerDashboard() {
+            document.getElementById('homeView').style.display = 'none';
+            document.getElementById('mapView').style.display = 'none';
+            document.getElementById('listView').style.display = 'none';
+            document.getElementById('officerView').style.display = 'block';
+            renderOfficerIssues();
+        }
+
+        function renderOfficerIssues() {
+            const container = document.getElementById('officerIssues');
+            container.innerHTML = '';
+            const issues = JSON.parse(localStorage.getItem('issues') || '[]');
+            if(issues.length === 0){
+                container.innerHTML = '<p>No issues reported yet.</p>';
+                return;
+            }
+            const grouped = {};
+            issues.forEach(issue => {
+                if(!grouped[issue.type]){
+                    grouped[issue.type] = [];
+                }
+                grouped[issue.type].push(issue);
+            });
+            for(let type in grouped){
+                const section = document.createElement('div');
+                section.innerHTML = `<h3>${type}</h3>`;
+                grouped[type].forEach(issue => {
+                    const div = document.createElement('div');
+                    div.className = 'issue-item';
+                    div.innerHTML = `<strong>Ward: ${issue.ward}</strong><br>
+                                     ${issue.desc}<br>
+                                     <small>${issue.date}</small><br>
+                                     <label>Progress: <input type="range" min="0" max="100" value="${issue.progress}" onchange="updateProgress(${issue.id}, this.value)"></label>
+                                     <div class="progress-bar"><div class="progress-fill" style="width:${issue.progress}%"></div></div>`;
+                    if(issue.image){
+                        const img = document.createElement('img');
+                        img.src = issue.image;
+                        div.appendChild(img);
+                    }
+                    section.appendChild(div);
+                });
+                container.appendChild(section);
+            }
+        }
+
+        function updateProgress(id, value) {
+            let issues = JSON.parse(localStorage.getItem('issues') || '[]');
+            issues = issues.map(issue => {
+                if(issue.id === id){
+                    issue.progress = parseInt(value);
+                }
+                return issue;
+            });
+            localStorage.setItem('issues', JSON.stringify(issues));
+            renderOfficerIssues();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if(localStorage.getItem('officerLoggedIn') === 'true'){
+                showOfficerDashboard();
+            } else {
+                showHome();
+            }
+        });
+
+    </script>
+   
+
+</body>
+
+</html>
